@@ -35,10 +35,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByRenterId(Long renterId);
 
-    List<Booking> findByStatusAndEndDateTimeBefore(
-            BookingStatus status,
-            LocalDate date
-    );
+    // List<Booking> findByStatusAndEndDateTimeBefore(
+    //         BookingStatus status,
+    //         LocalDate date
+    // );
 
     @Query("SELECT COALESCE(SUM(b.totalPrice), 0) FROM Booking b WHERE b.status = :status")
     BigDecimal sumTotalRevenueByStatus(@Param("status") BookingStatus status);
