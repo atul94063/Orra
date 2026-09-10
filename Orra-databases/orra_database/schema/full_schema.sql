@@ -94,140 +94,169 @@ CREATE TYPE category_enum AS ENUM (
 -- V1 USER TABLE CREATION 
 
 CREATE TABLE users (
-  user_id bigint NOT NULL DEFAULT nextval('users_user_id_seq'::regclass),
-  name character varying NOT NULL,
-  email character varying NOT NULL UNIQUE,
-  phone character varying,
-  profile_pic character varying,
-  address character varying,
-  pan_number character varying,
-  aadhaar_number character varying,
-  is_verified boolean DEFAULT false,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  username character varying,
-  id_proof character varying,
-  supabase_id uuid UNIQUE,
-  status character varying NOT NULL DEFAULT 'ACTIVE'::character varying,
-  verified boolean NOT NULL DEFAULT false,
-  avatar character varying,
-  subscribed boolean NOT NULL DEFAULT false,
-  CONSTRAINT users_pkey PRIMARY KEY (user_id)
-);
+    user_id BIGSERIAL PRIMARY KEY,
 
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+
+    username VARCHAR(100),
+    profile_pic VARCHAR(255),
+    avatar VARCHAR(255),
+    address VARCHAR(255),
+
+    pan_number VARCHAR(20),
+    aadhaar_number VARCHAR(20),
+    id_proof VARCHAR(20),
+
+    supabase_id UUID UNIQUE,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    is_verified BOOLEAN DEFAULT FALSE,
+    verified BOOLEAN NOT NULL DEFAULT FALSE,
+    subscribed BOOLEAN NOT NULL DEFAULT FALSE,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- V2 LISTING TABLE CREATION
 
 CREATE TABLE listings (
-  product_id bigint NOT NULL DEFAULT nextval('listings_product_id_seq'::regclass),
-  owner_id bigint,
-  serial_or_imei character varying UNIQUE,
-  brand character varying,
-  model character varying,
-  purchase_price numeric,
-  daily_rate numeric NOT NULL,
-  security_deposit numeric NOT NULL,
-  health_score integer CHECK (health_score >= 1 AND health_score <= 100),
-  location character varying,
-  is_active boolean DEFAULT true,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  days integer,
-  description character varying,
-  product_name character varying,
-  category character varying,
-  productspec jsonb,
-  available_from date,
-  available_to date,
-  maximum_rental_days integer,
-  minimum_rental_days integer,
-  purchase_year integer,
-  is_available boolean NOT NULL DEFAULT true,
-  approval_status character varying NOT NULL DEFAULT 'PENDING'::character varying,
-  CONSTRAINT listings_pkey PRIMARY KEY (product_id),
-  CONSTRAINT listings_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES .users(user_id)
+    product_id BIGSERIAL PRIMARY KEY,
+    owner_id BIGINT,
+
+    product_name VARCHAR(150),
+    brand VARCHAR(100),
+    model VARCHAR(100),
+    serial_or_imei VARCHAR(100) UNIQUE,
+
+    purchase_price NUMERIC(10,2),
+    daily_rate NUMERIC(10,2) NOT NULL,
+    security_deposit NUMERIC(10,2) NOT NULL,
+
+    health_score INT CHECK (health_score BETWEEN 1 AND 100),
+
+    location VARCHAR(150),
+    description VARCHAR(500),
+    category VARCHAR(50),
+    productspec JSONB,
+
+    purchase_year INT,
+    days INT,
+
+    available_from DATE,
+    available_to DATE,
+    minimum_rental_days INT,
+    maximum_rental_days INT,
+
+    is_active BOOLEAN DEFAULT TRUE,
+    is_available BOOLEAN NOT NULL DEFAULT TRUE,
+    approval_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (owner_id) REFERENCES users(user_id)
 );
 
 -- V3 BOOKING TABLE CREATION
 
 CREATE TABLE bookings (
-  booking_id bigint NOT NULL DEFAULT nextval('bookings_booking_id_seq'::regclass),
-  listing_id bigint,
-  renter_id bigint,
-  start_datetime date NOT NULL,
-  end_datetime date NOT NULL,
-  total_price numeric,
-  deposit_amount numeric,
-  status character varying NOT NULL DEFAULT 'pending'::booking_status_enum,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  accepted_at timestamp with time zone,
-  completed_at timestamp with time zone,
-  paid_at timestamp with time zone,
-  shipped_at timestamp with time zone,
-  CONSTRAINT bookings_pkey PRIMARY KEY (booking_id),
-  CONSTRAINT bookings_listing_id_fkey FOREIGN KEY (listing_id) REFERENCES .listings(product_id),
-  CONSTRAINT bookings_renter_id_fkey FOREIGN KEY (renter_id) REFERENCES .users(user_id)
+    booking_id BIGSERIAL PRIMARY KEY,
+
+    listing_id BIGINT,
+    renter_id BIGINT,
+
+    start_datetime DATE NOT NULL,
+    end_datetime DATE NOT NULL,
+
+    total_price NUMERIC(10,2),
+    deposit_amount NUMERIC(10,2),
+
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    accepted_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ,
+    shipped_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+
+    FOREIGN KEY (listing_id) REFERENCES listings(product_id),
+    FOREIGN KEY (renter_id) REFERENCES users(user_id)
 );
 
 -- V4 TRANSACTION TABLE CREATION
 
 CREATE TABLE transactions (
-  transaction_id bigint NOT NULL DEFAULT nextval('transactions_transaction_id_seq'::regclass),
-  booking_id bigint,
-  amount double precision NOT NULL,
-  type character varying NOT NULL,
-  status character varying NOT NULL,
-  payment_gateway_ref character varying,
-  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT transactions_pkey PRIMARY KEY (transaction_id),
-  CONSTRAINT transactions_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES .bookings(booking_id)
+    transaction_id BIGSERIAL PRIMARY KEY,
+    booking_id BIGINT,
+
+    amount NUMERIC(10,2) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+
+    payment_gateway_ref VARCHAR(255),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
 );
 
 
 -- V5 LISTING IMAGE TABLE CREATION
 
 CREATE TABLE listing_images (
-  image_id bigint NOT NULL DEFAULT nextval('listing_images_image_id_seq'::regclass),
-  listing_id bigint NOT NULL,
-  image_url text NOT NULL,
-  is_cover boolean NOT NULL DEFAULT false,
-  display_order integer NOT NULL DEFAULT 0,
-  created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  image_data text,
-  CONSTRAINT listing_images_pkey PRIMARY KEY (image_id),
-  CONSTRAINT listing_images_listing_id_fkey FOREIGN KEY (listing_id) REFERENCES .listings(product_id)
+    image_id BIGSERIAL PRIMARY KEY,
+    listing_id BIGINT NOT NULL,
+
+    image_url TEXT NOT NULL,
+    image_data TEXT,
+
+    is_cover BOOLEAN NOT NULL DEFAULT FALSE,
+    display_order INT NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (listing_id) REFERENCES listings(product_id)
 );
 -- V6 NOTIFICATION TABLE CREATION
 
 CREATE TABLE notifications (
-  id bigint NOT NULL DEFAULT nextval('notifications_id_seq'::regclass),
-  user_id bigint NOT NULL,
-  booking_id bigint,
-  message text NOT NULL,
-  type character varying NOT NULL,
-  is_read boolean NOT NULL DEFAULT false,
-  created_at timestamp without time zone NOT NULL DEFAULT now(),
-  CONSTRAINT notifications_pkey PRIMARY KEY (id),
-  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES .users(user_id),
-  CONSTRAINT notifications_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES .bookings(booking_id)
+    id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL,
+    booking_id BIGINT,
+
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
 );
 --V7 WHISLIST TABLE CREATION
 
 CREATE TABLE wishlist (
-  wishlist_id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
-  added_at timestamp without time zone,
-  product_id bigint,
-  user_id bigint,
-  CONSTRAINT wishlist_pkey PRIMARY KEY (wishlist_id),
-  CONSTRAINT fke0d9j8grqwrdfeo8as6p5qdqk FOREIGN KEY (product_id) REFERENCES .listings(product_id),
-  CONSTRAINT fktrd6335blsefl2gxpb8lr0gr7 FOREIGN KEY (user_id) REFERENCES .users(user_id)
+    wishlist_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT,
+    product_id BIGINT,
+
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (product_id) REFERENCES listings(product_id)
 );
 
 
 --V8 USER ROLE CREATION
 
 CREATE TABLE user_roles (
-  user_id bigint NOT NULL,
-  role character varying NOT NULL,
-  CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role),
-  CONSTRAINT fk_user_roles_user FOREIGN KEY (user_id) REFERENCES .users(user_id)
+    user_id BIGINT NOT NULL,
+    role VARCHAR(20) NOT NULL,
+
+    PRIMARY KEY (user_id, role),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
