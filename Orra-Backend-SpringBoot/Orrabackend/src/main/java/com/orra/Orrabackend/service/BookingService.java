@@ -314,15 +314,15 @@ public class BookingService {
                 .orElseThrow(() -> new RuntimeException("Exception not Found"));
     }
 
-    private BookingStatus effectiveStatus(Booking booking) {
-        if (booking.getStatus() == BookingStatus.ACCEPTED
-                && booking.getAcceptedAt() != null
-                && Duration.between(booking.getAcceptedAt(), Instant.now())
-                .toDays() >= ACCEPT_TO_PAY_TIMEOUT_DAYS) {
-            return BookingStatus.REJECTED; // expired, display-only — scheduled job will actually delete/update it
-        }
-        return booking.getStatus();
-    }
+    // private BookingStatus effectiveStatus(Booking booking) {
+    //     if (booking.getStatus() == BookingStatus.ACCEPTED
+    //             && booking.getAcceptedAt() != null
+    //             && Duration.between(booking.getAcceptedAt(), Instant.now())
+    //             .toDays() >= ACCEPT_TO_PAY_TIMEOUT_DAYS) {
+    //         return BookingStatus.REJECTED; // expired, display-only — scheduled job will actually delete/update it
+    //     }
+    //     return booking.getStatus();
+    // }
 
     private BookingResponseDTO toResponseDTO(Booking booking) {
         return buildResponseDTO(booking, null);
@@ -350,7 +350,6 @@ public class BookingService {
                 .totalPrice(booking.getTotalPrice())
                 .depositAmount(booking.getDepositAmount())
                 .status(status)
-                .displayStatus(overrideStatus != null ? overrideStatus : effectiveStatus(booking))
                 .createdAt(booking.getCreatedAt())
                 .build();
     }
