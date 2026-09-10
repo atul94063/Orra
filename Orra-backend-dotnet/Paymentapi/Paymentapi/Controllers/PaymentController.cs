@@ -59,7 +59,6 @@ public async Task<IActionResult> GetStatus(long transactionId)
 
             try
             {
-                // Generate a receipt id (used to track this order in Razorpay + our DB)
                 var receipt = $"receipt_{Guid.NewGuid().ToString("N").Substring(0, 12)}";
 
                 // Call Razorpay to create the order
