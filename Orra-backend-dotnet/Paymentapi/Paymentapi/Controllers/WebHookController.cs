@@ -64,7 +64,7 @@ namespace Paymentapi.Controllers
                     transaction.PaymentGatewayRef = paymentId;
                     await _context.SaveChangesAsync();
 
-                    // TODO (Phase C): publish to RabbitMQ "payment.success" queue here
+            
 
                     var message = new
                     {
