@@ -39,7 +39,6 @@ public class BookingResponseDTO {
     private BigDecimal depositAmount;
 
     private BookingStatus status;
-    private BookingStatus displayStatus;
     private Instant createdAt;
 
 }
