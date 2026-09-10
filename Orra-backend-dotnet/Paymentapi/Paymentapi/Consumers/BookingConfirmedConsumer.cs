@@ -84,7 +84,7 @@ namespace Paymentapi.Consumers
                 cancellationToken: stoppingToken
             );
 
-            // Keep the background service alive
+           
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
