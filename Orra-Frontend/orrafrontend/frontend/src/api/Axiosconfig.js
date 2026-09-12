@@ -7,23 +7,24 @@ const axiosinstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true
 });
 
-axiosinstance.interceptors.request.use(
-  async (config) => {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
+// axiosinstance.interceptors.request.use(
+//   async (config) => {
+//     const { data } = await supabase.auth.getSession();
+//     const token = data?.session?.access_token;
 
-    if (token) {
-      // Safe header assignment across all Axios versions
-      config.headers = config.headers || {};
-      config.headers["Authorization"] = `Bearer ${token}`;
-    }
+//     if (token) {
+//       // Safe header assignment across all Axios versions
+//       config.headers = config.headers || {};
+//       config.headers["Authorization"] = `Bearer ${token}`;
+//     }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+//     return config;
+//   },
+//   (error) => Promise.reject(error)
+// );
 
 // .NET Axios Instance
 const paymentAxios = axios.create({
