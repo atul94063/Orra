@@ -72,14 +72,14 @@ The platform handles the complete rental lifecycle, including product listings, 
 
 ## System Architecture
 
-ORRA uses a service-oriented architecture where the main application logic is handled by the Spring Boot backend while payment processing is handled by a separate .NET service.
+ORRA uses a service-oriented architecture where the core application and rental business logic are handled by the Spring Boot backend, while payment-related processing is handled by a separate .NET service.
 
 ```mermaid
 flowchart TD
 
     User[User] --> Frontend[React Frontend]
 
-    Frontend -->|REST API| Spring[Spring Boot Backend]
+    Frontend -->|REST APIs| Spring[Spring Boot Backend]
 
     Frontend -->|Authentication| Supabase[Supabase Auth]
 
@@ -87,35 +87,33 @@ flowchart TD
 
     Spring --> PostgreSQL[(PostgreSQL)]
 
-    Spring --> RabbitMQ[RabbitMQ]
-
     Frontend -->|Payment Request| PaymentService[.NET Payment Service]
 
     PaymentService --> Gateway[Payment Gateway]
 
     Gateway -->|Webhook| PaymentService
 
-    PaymentService -->|payment.success| RabbitMQ
+    PaymentService -->|payment.success| RabbitMQ[RabbitMQ]
 
     RabbitMQ -->|Consume Event| Spring
 
-    Spring -->|Update Booking & Listing| PostgreSQL
+    Spring -->|Update Application State| PostgreSQL
 ```
 
 ### Architecture Overview
 
 - **React** provides the user interface and communicates with backend services using REST APIs.
-- **Spring Boot** handles listings, bookings, users, reviews, wishlists, notifications, and other core business logic.
-- **PostgreSQL** stores application data.
+- **Spring Boot** handles listings, bookings, users, reviews, wishlists, notifications, and the core rental business logic.
+- **PostgreSQL** stores the application's relational data.
 - **Supabase Authentication** manages user authentication and JWT-based sessions.
-- **ASP.NET Core** handles payment-related processing and webhook verification.
-- **RabbitMQ** enables asynchronous communication between the payment service and the Spring Boot backend.
+- **ASP.NET Core** handles payment-related processing and payment webhook verification.
+- **RabbitMQ** enables asynchronous communication between the payment service and Spring Boot backend.
 
 ---
 
 ## Booking & Payment Flow
 
-A booking moves through multiple stages before the rental becomes active.
+A booking moves through multiple stages before a rental becomes active.
 
 ```mermaid
 flowchart TD
@@ -147,12 +145,12 @@ flowchart TD
 
 1. A renter selects an available product and creates a booking.
 2. The booking is initially created with `PENDING` status.
-3. The product owner reviews the request.
+3. The product owner reviews the booking request.
 4. If accepted, the booking moves to `ACCEPTED`.
 5. The renter completes the payment.
 6. The payment gateway sends a webhook to the .NET payment service.
 7. The .NET service verifies the payment.
-8. After successful verification, a `payment.success` event is published to RabbitMQ.
+8. After successful verification, a `payment.success` event is published through RabbitMQ.
 9. The Spring Boot backend consumes the event.
 10. The booking status changes to `ACTIVE`.
 11. The corresponding product becomes unavailable for other renters.
@@ -173,7 +171,7 @@ stateDiagram-v2
     PENDING --> CANCELLED : Booking cancelled
 
     ACCEPTED --> ACTIVE : Payment successful
-    ACCEPTED --> CANCELLED : Booking cancelled / payment not completed
+    ACCEPTED --> CANCELLED : Cancelled / payment not completed
 
     ACTIVE --> COMPLETED : Rental completed
 
@@ -195,7 +193,7 @@ stateDiagram-v2
 
 ## Business Rules
 
-ORRA implements several business rules to maintain consistency throughout the rental process.
+ORRA implements business rules to maintain consistency throughout the rental lifecycle.
 
 - Product owners cannot book their own products.
 - Only active and available products can be booked.
@@ -210,103 +208,54 @@ ORRA implements several business rules to maintain consistency throughout the re
 
 ---
 
-## Core Modules
-
-### Product Listings
-
-Users can list electronic products for rent with information such as:
-
-- Product name
-- Category
-- Brand
-- Model
-- Description
-- Daily rental rate
-- Security deposit
-- Product availability
-
-The platform displays only products that are currently active and available for rental.
-
-### Booking Management
-
-The booking module manages the complete rental lifecycle.
-
-It is responsible for:
-
-- Creating booking requests
-- Owner approval
-- Booking status transitions
-- Rental dates
-- Product availability
-- Booking cancellation
-- Booking completion
-
-### Payment Processing
-
-Payment processing is separated from the main Spring Boot backend.
-
-The .NET payment service is responsible for:
-
-- Handling payment-related operations
-- Receiving payment gateway webhooks
-- Verifying payment events
-- Publishing successful payment events
-
-RabbitMQ is used to communicate successful payment events to the Spring Boot backend.
-
-### Notifications
-
-Notifications are generated for important booking and payment events so users can track changes to their rental requests.
-
-### Reviews
-
-Users can provide reviews and ratings associated with completed rental experiences.
-
-### Wishlist
-
-Users can save products to their wishlist for later viewing.
-
----
-
 ## Database Design
 
-PostgreSQL is used as the primary relational database.
+ORRA uses **PostgreSQL** as its primary relational database.
 
-Major entities include:
+The database is designed around users, product listings, bookings, transactions, notifications, wishlists, product images, and user roles.
 
-```text
-Users
-  │
-  ├── Listings
-  │      │
-  │      ├── Bookings
-  │      │      │
-  │      │      └── Transactions
-  │      │
-  │      └── Reviews
-  │
-  ├── Wishlist
-  │
-  └── Notifications
-```
+### Entity Relationship Diagram
+
+<p align="center">
+  <img
+    src="docs/images/er-diagram.png"
+    alt="ORRA Entity Relationship Diagram"
+    width="100%"
+  >
+</p>
+
+### Core Relationships
+
+- A **User** can create multiple **Listings**.
+- A **User** can have multiple **Roles**.
+- A **User** can add multiple products to their **Wishlist**.
+- A **Listing** belongs to an owner.
+- A **Listing** can contain multiple **Listing Images**.
+- A **Listing** can have multiple **Bookings**.
+- A **Booking** references a renter and a product listing.
+- A **Booking** can have multiple **Transactions**.
+- A **Booking** can generate multiple **Notifications**.
 
 ### Major Tables
 
 | Table | Purpose |
 |---|---|
-| `users` | Stores user information |
+| `users` | Stores user profile and account information |
+| `user_roles` | Stores roles assigned to users |
 | `listings` | Stores electronic products listed for rent |
-| `bookings` | Stores rental booking information |
+| `listing_images` | Stores images associated with product listings |
+| `bookings` | Stores rental booking information and lifecycle status |
 | `transactions` | Stores payment transaction information |
-| `reviews` | Stores ratings and reviews |
 | `wishlist` | Stores products saved by users |
-| `notifications` | Stores user notifications |
+| `notifications` | Stores booking and payment-related notifications |
+
+> The ER diagram is maintained alongside the project so that the database model can evolve with the application.
 
 ---
 
 ## Backend Architecture
 
-The Spring Boot backend follows a layered architecture.
+The Spring Boot backend follows a layered architecture to separate API handling, business logic, and database access.
 
 ```text
 Client Request
@@ -327,27 +276,89 @@ Spring Data JPA / Hibernate
 PostgreSQL
 ```
 
-### Responsibilities
+### Controller Layer
 
-**Controller Layer**
+Handles incoming HTTP requests, validates request data, and returns API responses.
 
-Handles HTTP requests and responses.
+### Service Layer
 
-**Service Layer**
+Contains the application's business logic, including booking rules, authorization checks, product availability, and status transitions.
 
-Contains application business logic and booking rules.
+### Repository Layer
 
-**Repository Layer**
+Provides database access using Spring Data JPA repositories.
 
-Provides database access using Spring Data JPA.
+### Entity Layer
 
-**Entity Layer**
+Maps Java objects to relational database tables using JPA and Hibernate.
 
-Maps Java objects to PostgreSQL tables using JPA/Hibernate.
+### DTO Layer
 
-**DTO Layer**
+Transfers required information between the backend and client without exposing persistence entities directly.
 
-Transfers required data between the API and client without exposing persistence entities directly.
+---
+
+## Core Modules
+
+### Product Listings
+
+Users can create and manage electronic products available for rent.
+
+Listings contain information such as:
+
+- Product name
+- Category
+- Brand
+- Model
+- Description
+- Daily rental rate
+- Security deposit
+- Location
+- Availability status
+- Product images
+
+---
+
+### Booking Management
+
+The booking module manages the rental lifecycle.
+
+It is responsible for:
+
+- Creating booking requests
+- Owner approval
+- Booking status transitions
+- Rental start and end dates
+- Product availability
+- Booking cancellation
+- Booking completion
+
+---
+
+### Payment Processing
+
+Payment processing is separated from the main Spring Boot backend.
+
+The .NET payment service is responsible for:
+
+- Handling payment-related operations
+- Receiving payment gateway webhooks
+- Verifying payment events
+- Publishing successful payment events
+
+RabbitMQ is used to asynchronously communicate successful payment events to the Spring Boot backend.
+
+---
+
+### Notifications
+
+Notifications are generated for important booking and payment events so users can track changes related to their rental requests.
+
+---
+
+### Wishlist
+
+Users can save products to their wishlist for later viewing.
 
 ---
 
@@ -362,12 +373,13 @@ Authentication APIs
 User APIs
 Listing APIs
 Booking APIs
-Review APIs
 Wishlist APIs
 Notification APIs
 ```
 
-The frontend communicates with these APIs using Axios.
+The React frontend communicates with these APIs using Axios.
+
+Detailed API documentation can be added using Swagger / OpenAPI.
 
 ---
 
@@ -385,10 +397,13 @@ sequenceDiagram
 
     User->>React: Login
     React->>Supabase: Authenticate
+
     Supabase-->>React: JWT Access Token
 
     React->>SpringBoot: API Request + Bearer Token
+
     SpringBoot->>SpringBoot: Validate Token
+
     SpringBoot-->>React: Protected Resource
 ```
 
@@ -407,6 +422,16 @@ Authorization rules are enforced by the backend rather than relying only on fron
 ```text
 Orra/
 │
+├── README.md
+│
+│
+├── docs/
+│   ├── images/
+│   │   └── er-diagram.png
+│   │
+│   └── diagrams/
+│       └── er-diagram.mermaid
+│
 ├── Orra-Backend-SpringBoot/
 │   └── Orrabackend/
 │       └── Spring Boot backend
@@ -417,11 +442,9 @@ Orra/
 ├── Orra-backend-dotnet/
 │   └── .NET payment service
 │
-├── Orra-databases/
-│   └── orra_database/
-│       └── PostgreSQL database scripts
-│
-└── README.md
+└── Orra-databases/
+    └── orra_database/
+        └── PostgreSQL database scripts
 ```
 
 ---
@@ -439,8 +462,11 @@ Install the following before running the project:
 - .NET SDK
 - PostgreSQL
 - RabbitMQ
-- Docker (optional)
 - Git
+
+Docker can optionally be used for supporting infrastructure.
+
+---
 
 ### Clone the Repository
 
@@ -449,12 +475,16 @@ git clone https://github.com/atul94063/Orra.git
 cd Orra
 ```
 
+---
+
 ### Start the Spring Boot Backend
 
 ```bash
 cd Orra-Backend-SpringBoot/Orrabackend
 mvn spring-boot:run
 ```
+
+---
 
 ### Start the React Frontend
 
@@ -463,6 +493,8 @@ cd Orra-Frontend
 npm install
 npm run dev
 ```
+
+---
 
 ### Start the .NET Payment Service
 
@@ -473,11 +505,13 @@ dotnet restore
 dotnet run
 ```
 
-### Database
+---
+
+### Configure PostgreSQL
 
 Create the PostgreSQL database and configure the required database connection properties before starting the backend.
 
-Environment-specific credentials and secrets should be provided through environment variables and should not be committed to the repository.
+Sensitive information such as database passwords, authentication secrets, and payment credentials should be supplied through environment variables and should not be committed to the repository.
 
 ---
 
@@ -497,23 +531,18 @@ The application follows several security practices:
 
 ## Future Improvements
 
-Planned improvements include:
+The following improvements are planned as the project evolves:
 
-- Automated unit and integration testing
-- Swagger / OpenAPI documentation
-- Docker Compose setup for the complete application
-- GitHub Actions CI/CD pipeline
-- Improved database indexing
-- Centralized exception handling
-- Improved application logging
-- Deployment to a cloud platform
-
----
-
-## Repository
-
-GitHub:  
-https://github.com/atul94063/Orra
+- Add automated unit and integration testing
+- Add Swagger / OpenAPI documentation
+- Add Docker Compose for running the complete application
+- Add GitHub Actions CI/CD pipeline
+- Improve database indexing for frequently queried columns
+- Add centralized exception handling
+- Improve application logging and monitoring
+- Add frontend and backend deployment
+- Add application screenshots and demo
+- Expand technical documentation as the project grows
 
 ---
 
@@ -521,4 +550,4 @@ https://github.com/atul94063/Orra
 
 **Atul Golchha**
 
-Full-Stack Developer focused on Java, Spring Boot, React, REST APIs, PostgreSQL, and backend development.
+Full-Stack Developer focused on **Java, Spring Boot, React, REST APIs, PostgreSQL, and backend development**.
