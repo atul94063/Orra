@@ -1,0 +1,117 @@
+erDiagram
+    USERS ||--o{ LISTINGS : "owns"
+    USERS ||--o{ BOOKINGS : "rents (as renter)"
+    LISTINGS ||--o{ BOOKINGS : "is booked in"
+    BOOKINGS ||--o{ TRANSACTIONS : "generates"
+    LISTINGS ||--o{ LISTING_IMAGES : "has"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    BOOKINGS ||--o{ NOTIFICATIONS : "triggers"
+    USERS ||--o{ WISHLIST : "saves"
+    LISTINGS ||--o{ WISHLIST : "saved in"
+    USERS ||--o{ USER_ROLES : "has"
+
+    USERS {
+        bigint user_id PK
+        varchar name
+        varchar email UK
+        varchar phone
+        varchar profile_pic
+        varchar address
+        varchar pan_number
+        varchar aadhaar_number
+        boolean is_verified
+        timestamp created_at
+        bigint id
+        varchar username
+        varchar id_proof
+        uuid supabase_id UK
+        varchar status
+        boolean verified
+        varchar avatar
+        boolean subscribed
+    }
+
+    LISTINGS {
+        bigint product_id PK
+        bigint owner_id FK
+        varchar serial_or_imei UK
+        varchar brand
+        varchar model
+        numeric purchase_price
+        numeric daily_rate
+        numeric security_deposit
+        int health_score
+        varchar location
+        boolean is_active
+        timestamp created_at
+        int days
+        varchar description
+        varchar product_name
+        varchar category
+        jsonb productspec
+        date available_from
+        date available_to
+        int maximum_rental_days
+        int minimum_rental_days
+        int purchase_year
+        boolean is_available
+        varchar approval_status
+    }
+
+    BOOKINGS {
+        bigint booking_id PK
+        bigint listing_id FK
+        bigint renter_id FK
+        date start_datetime
+        date end_datetime
+        numeric total_price
+        numeric deposit_amount
+        varchar status
+        timestamp created_at
+        timestamptz accepted_at
+        timestamptz completed_at
+        timestamptz paid_at
+        timestamptz shipped_at
+    }
+
+    TRANSACTIONS {
+        bigint transaction_id PK
+        bigint booking_id FK
+        double amount
+        varchar type
+        varchar status
+        varchar payment_gateway_ref
+        timestamp created_at
+    }
+
+    LISTING_IMAGES {
+        bigint image_id PK
+        bigint listing_id FK
+        text image_url
+        boolean is_cover
+        int display_order
+        timestamp created_at
+        text image_data
+    }
+
+    NOTIFICATIONS {
+        bigint id PK
+        bigint user_id FK
+        bigint booking_id FK
+        text message
+        varchar type
+        boolean is_read
+        timestamp created_at
+    }
+
+    WISHLIST {
+        bigint wishlist_id PK
+        timestamp added_at
+        bigint product_id FK
+        bigint user_id FK
+    }
+
+    USER_ROLES {
+        bigint user_id PK,FK
+        varchar role PK
+    }
