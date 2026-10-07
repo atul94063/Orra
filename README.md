@@ -55,7 +55,8 @@ The platform handles the complete rental lifecycle, including product listings, 
 ### Authentication
 
 - Supabase Authentication
-- JWT-based authentication
+- Cookie-based session handling
+- Spring Security
 
 ### Messaging
 
@@ -385,7 +386,7 @@ Detailed API documentation can be added using Swagger / OpenAPI.
 
 ## Authentication Flow
 
-ORRA uses Supabase Authentication with JWT-based sessions.
+ORRA uses **Supabase Authentication** with cookie-based session handling.
 
 ```mermaid
 sequenceDiagram
@@ -396,26 +397,17 @@ sequenceDiagram
     participant SpringBoot
 
     User->>React: Login
-    React->>Supabase: Authenticate
+    React->>Supabase: Authenticate User
+    Supabase-->>React: Authentication Session
 
-    Supabase-->>React: JWT Access Token
-
-    React->>SpringBoot: API Request + Bearer Token
-
-    SpringBoot->>SpringBoot: Validate Token
-
+    React->>SpringBoot: API Request with Authentication Cookie
+    SpringBoot->>SpringBoot: Validate Authentication
     SpringBoot-->>React: Protected Resource
 ```
 
-The frontend attaches the access token to protected API requests:
+Authentication information is sent through cookies with API requests rather than manually attaching an access token using the `Authorization` header.
 
-```text
-Authorization: Bearer <access-token>
-```
-
-Authorization rules are enforced by the backend rather than relying only on frontend restrictions.
-
----
+Backend authorization rules ensure that authenticated users can only perform operations they are permitted to perform.
 
 ## Project Structure
 
@@ -517,9 +509,8 @@ Sensitive information such as database passwords, authentication secrets, and pa
 
 ## Security
 
-The application follows several security practices:
-
-- JWT-based authentication
+- Supabase Authentication
+- Cookie-based authentication
 - Spring Security for protected backend endpoints
 - Backend authorization checks
 - Environment variables for sensitive configuration
